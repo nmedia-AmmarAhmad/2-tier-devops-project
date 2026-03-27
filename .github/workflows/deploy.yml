@@ -30,20 +30,16 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # 1. Prep Directory
+            # 1. Force clean the directory
+            sudo rm -rf ~/app
             mkdir -p ~/app && cd ~/app
             
-            # 2. Clear old files AND THEN clone (Added the semicolon ;)
-            rm -rf *; git clone https://github.com/nmedia-AmmarAhmad/2-tier-devops-project.git .
+            # 2. Clone the code (Now the folder is guaranteed empty)
+            git clone https://github.com/nmedia-AmmarAhmad/2-tier-devops-project.git .
             
-            # 3. Ensure Node/NPM and PM2 are installed (Safety check)
-            if ! command -v npm &> /dev/null; then
-              sudo apt-get update && sudo apt-get install -y nodejs npm
-            fi
-            if ! command -v pm2 &> /dev/null; then
-              sudo npm install -g pm2
-            fi
-
+            # 3. Double check the files are there (This will show in your logs)
+            ls -la
+            
             # 4. Install & Inject Secrets
             npm install
             echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
@@ -52,4 +48,6 @@ jobs:
             echo "DB_NAME=ammar_db" >> .env
             
             # 5. Start/Restart App
-            pm2 restart ammar-app || pm2 start app.js --name "ammar-app"
+            # We use 'delete' then 'start' to ensure a fresh process
+            pm2 delete ammar-app || true
+            pm2 start app.js --name "ammar-app"
