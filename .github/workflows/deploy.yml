@@ -1,0 +1,43 @@
+name: Ammar-Pro-CI-CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  sonarcloud-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Install Dependencies
+        run: npm install
+      - name: Run Tests & Coverage
+        run: npm test
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  deploy:
+    needs: sonarcloud-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to App Servers via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          # We use the ALB DNS from your Terraform Output
+          host: ${{ secrets.ALB_DNS }} 
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Create app directory if it doesn't exist
+            mkdir -p ~/app && cd ~/app
+            # Pull latest code (you'll need to set up Git on the server)
+            # For tonight, we'll assume a simple PM2 start
+            sudo npm install -g pm2
+            # Pass the DB Host as an environment variable
+            export DB_HOST=${{ secrets.DB_HOST }}
+            pm2 restart all || pm2 start app.js --name "ammar-app"
