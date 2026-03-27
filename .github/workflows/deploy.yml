@@ -26,7 +26,7 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.EC2_IP }}
+          host: ${{ secrets.EC2_IP }} # Must be a Public IP, NOT the ALB DNS
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
           script: |
@@ -38,12 +38,13 @@ jobs:
             git clone https://github.com/nmedia-AmmarAhmad/2-tier-devops-project.git .
             
             # 3. AUTO-FIX: Inject dotenv config into app.js
-            # This adds "require('dotenv').config();" to the very first line
+            # This ensures the app actually reads the .env file we create below
             sed -i "1i require('dotenv').config();" app.js
             
             # 4. Install & Inject Secrets
-            # We install dotenv explicitly just in case it's not in package.json
+            # We explicitly install dotenv and mysql2 to be safe
             npm install dotenv mysql2
+            npm install
             
             echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
             echo "DB_USER=${{ secrets.DB_USER }}" >> .env
@@ -51,6 +52,6 @@ jobs:
             echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
             
             # 5. Start/Restart App
-            # Delete first to ensure PM2 clears old environment variables
+            # 'delete' ensures PM2 clears out the old 127.0.0.1 memory
             pm2 delete ammar-app || true
             pm2 start app.js --name "ammar-app"
