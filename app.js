@@ -7,11 +7,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Database Connection
 // Database Connection
+require('dotenv').config(); // <--- THIS IS CRITICAL
+
 const db = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'admin',
-    password: process.env.DB_PASSWORD || 'ComplexPass123!',
-    database: process.env.DB_NAME || 'ammar_db'
+    host: process.env.DB_HOST, // Remove the || 'localhost' to see the real error
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
 });
 
 // 1. The Frontend Form (HTML)
