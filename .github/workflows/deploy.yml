@@ -33,15 +33,23 @@ jobs:
             # 1. Prep Directory
             mkdir -p ~/app && cd ~/app
             
-            # 2. Get the code (If repo is public)
-            rm -rf * git clone https://github.com/nmedia-AmmarAhmad/2-tier-devops-project.git .
+            # 2. Clear old files AND THEN clone (Added the semicolon ;)
+            rm -rf *; git clone https://github.com/nmedia-AmmarAhmad/2-tier-devops-project.git .
             
-            # 3. Install & Inject Secrets
+            # 3. Ensure Node/NPM and PM2 are installed (Safety check)
+            if ! command -v npm &> /dev/null; then
+              sudo apt-get update && sudo apt-get install -y nodejs npm
+            fi
+            if ! command -v pm2 &> /dev/null; then
+              sudo npm install -g pm2
+            fi
+
+            # 4. Install & Inject Secrets
             npm install
             echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
             echo "DB_USER=admin" >> .env
             echo "DB_PASSWORD=ComplexPass123!" >> .env
             echo "DB_NAME=ammar_db" >> .env
             
-            # 4. Start/Restart App
+            # 5. Start/Restart App
             pm2 restart ammar-app || pm2 start app.js --name "ammar-app"
