@@ -6,11 +6,12 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Database Connection
+// Database Connection
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
-    user: 'admin',
-    password: 'ComplexPass123!',
-    database: 'ammar_db'
+    user: process.env.DB_USER || 'admin',
+    password: process.env.DB_PASSWORD || 'ComplexPass123!',
+    database: process.env.DB_NAME || 'ammar_db'
 });
 
 // 1. The Frontend Form (HTML)
