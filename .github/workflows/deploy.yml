@@ -26,7 +26,7 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.ALB_DNS }} # Must be a Public IP, NOT the ALB DNS
+          host: ${{ secrets.EC2_IP }} # Must be a Public IP, NOT the ALB DNS
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
           script: |
