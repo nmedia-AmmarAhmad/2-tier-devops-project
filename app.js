@@ -39,4 +39,10 @@ app.post('/submit', (req, res) => {
 // 3. Health Check
 app.get('/health', (req, res) => res.sendStatus(200));
 
-app.listen(3000, () => console.log('App running on 3000'));
+if (require.main === module) {
+    app.listen(3000, () => {
+        console.log("App running on 3000");
+    });
+}
+
+module.exports = app; // This allows the test file to "grab" the app
