@@ -11,25 +11,39 @@ resource "aws_launch_template" "app" {
 
   user_data = base64encode(<<-EOF
               #!/bin/bash
+              # 1. Update and install dependencies
               apt-get update -y
-              apt-get install -y mysql-client git nodejs npm
-              sudo npm install -g pm2
+              # Install Node.js from nodesource to ensure we get a modern version (v18+)
+              curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+              apt-get install -y mysql-client git nodejs
+              npm install -g pm2
 
-              # Wait for RDS
+              # 2. Wait for RDS to be ready
               until mysql -h ${aws_db_instance.db.address} -u admin -p'ComplexPass123!' -e "SELECT 1;" &> /dev/null
               do
+                echo "Waiting for RDS..."
                 sleep 5
               done
 
-              # Deploy Code
+              # 3. Code Deployment
               mkdir -p /home/ubuntu/app
+              # IMPORTANT: Update the URL below to your actual repo
               git clone https://github.com/YOUR_USER/YOUR_REPO.git /home/ubuntu/app
+              
+              # Set permissions so 'ubuntu' user owns the files
+              chown -R ubuntu:ubuntu /home/ubuntu/app
               cd /home/ubuntu/app
-              npm install
 
-              # Start App
+              # 4. Environment Setup
+              # We create the .env file so the app knows where the DB is
               echo "DB_HOST=${aws_db_instance.db.address}" > .env
-              pm2 start app.js --name "ammar-app"
+              echo "DB_USER=admin" >> .env
+              echo "DB_PASSWORD=ComplexPass123!" >> .env
+              echo "DB_NAME=ammar_db" >> .env
+
+              # 5. Start the App as the 'ubuntu' user
+              sudo -u ubuntu npm install
+              sudo -u ubuntu pm2 start app.js --name "ammar-app"
               EOF
   )
 }
