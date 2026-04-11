@@ -1,57 +1,41 @@
-name: Ammar-Pro-CI-CD-Direct-Deploy
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  sonarcloud-scan:
+  ci-cd:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
       - name: Install Dependencies
         run: npm install
-      - name: Run Tests
-        run: npm test
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  deploy:
-    needs: sonarcloud-scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@master
+      # 1. THE CI PART: SonarQube Scan
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: "https://sonarcloud.io" # Assuming you're using SonarCloud
+
+      # 2. THE BUILD PART: Zip the app
+      - name: Zip Lambda Function
+        run: zip -r function.zip app.js node_modules
+
+      # 3. THE CD PART: Push code to AWS (No Terraform here!)
+      - name: Update Lambda Code
+        uses: appleboy/lambda-action@master
         with:
-          host: ${{ secrets.EC2_IP }} # Must be a Public IP, NOT the ALB DNS
-          username: ubuntu
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            # 1. Force clean the directory
-            sudo rm -rf ~/app
-            mkdir -p ~/app && cd ~/app
-            
-            # 2. Clone the code
-            git clone https://github.com/nmedia-AmmarAhmad/2-tier-devops-project.git .
-            
-            # 3. AUTO-FIX: Inject dotenv config into app.js
-            # This ensures the app actually reads the .env file we create below
-            sed -i "1i require('dotenv').config();" app.js
-            
-            # 4. Install & Inject Secrets
-            # We explicitly install dotenv and mysql2 to be safe
-            npm install dotenv mysql2
-            npm install
-            
-            echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
-            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
-            
-            # 5. Start/Restart App
-            # 'delete' ensures PM2 clears out the old 127.0.0.1 memory
-            pm2 delete ammar-app || true
-            pm2 start app.js --name "ammar-app"
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: us-east-1 
+          function_name: my-javascript-app # MUST match the name in your local Terraform
+          zip_file: function.zip

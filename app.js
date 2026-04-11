@@ -21,7 +21,7 @@ app.get('/', (req, res) => {
     res.send(`
         <h1>Ammar's Support Portal</h1>
         <form action="/submit" method="POST">
-            <input type="text" name="username" placeholder="Your name" required><br><br>
+            <input type="text" name="userame" placeholder="Your name" required><br><br>
             <input type="text" name="issue" placeholder="Describe Tech Issue" required><br><br>
             <button type="submit">Submit to Database</button>
         </form>
