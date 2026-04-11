@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ammar's Cloud Uploader</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding-top: 50px; background: #f4f4f4; }
+        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 400px; }
+        input { margin-bottom: 1rem; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #status { margin-top: 1rem; color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>S3 Image Uploader</h2>
+        <input type="file" id="fileInput" accept="image/*">
+        <button onclick="uploadFile()">Upload to S3</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const status = document.getElementById('status');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert("Please select a file first!");
+                return;
+            }
+
+            status.innerText = "Uploading...";
+
+            // 1. Convert file to Base64
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                const base64File = reader.result;
+
+                const payload = {
+                    filename: file.name,
+                    file: base64File
+                };
+
+                // 2. Send to your API Gateway
+                const API_URL = "https://tgqsox85og.execute-api.us-east-1.amazonaws.com";
+                
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const result = await response.json();
+                    status.innerText = result.message || "Upload failed.";
+                } catch (err) {
+                    status.innerText = "Error connecting to API.";
+                    console.error(err);
+                }
+            };
+        }
+    </script>
+</body>
+</html>

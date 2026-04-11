@@ -1,41 +1,32 @@
-name: CI/CD Pipeline
+name: Deploy Serverless Portal
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main  # Runs every time you push to main
 
 jobs:
-  ci-cd:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          node-version: 18
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Zip Python Function
+        run: zip lambda_function_payload.zip lambda_function.py
 
-      # 1. THE CI PART: SonarQube Scan
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: "https://sonarcloud.io" # Assuming you're using SonarCloud
+      - name: Terraform Init
+        run: terraform init
 
-      # 2. THE BUILD PART: Zip the app
-      - name: Zip Lambda Function
-        run: zip -r function.zip app.js node_modules
-
-      # 3. THE CD PART: Push code to AWS (No Terraform here!)
-      - name: Update Lambda Code
-        uses: appleboy/lambda-action@master
-        with:
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_region: us-east-1 
-          function_name: my-javascript-app # MUST match the name in your local Terraform
-          zip_file: function.zip
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
